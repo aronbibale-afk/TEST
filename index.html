@@ -1,1028 +1,945 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeminiLabs — Design Studio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,300&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-    <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
+                                 TableStyle, PageBreak, HRFlowable)
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
 
-        :root {
-            --bg: #0f0f0f;
-            --bg2: #161616;
-            --bg3: #1f1f1f;
-            --border: #2a2a2a;
-            --text: #f1f1f1;
-            --muted: #aaaaaa;
-            --subtle: #717171;
-            --accent: #ff4444;
-            --accent2: #ff6b35;
-            --radius: 12px;
-        }
+W, H = A4
 
-        html { scroll-behavior: smooth; }
+doc = SimpleDocTemplate(
+    "/mnt/user-data/outputs/Exercices_BTS_Entrainement.pdf",
+    pagesize=A4,
+    leftMargin=1.8*cm, rightMargin=1.8*cm,
+    topMargin=2*cm, bottomMargin=2*cm
+)
 
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'DM Sans', sans-serif;
-            font-size: 15px;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
+C_DARK   = colors.HexColor("#1a1a2e")
+C_BLUE   = colors.HexColor("#16213e")
+C_ACC    = colors.HexColor("#0f3460")
+C_HL     = colors.HexColor("#e94560")
+C_LIGHT  = colors.HexColor("#f5f5f5")
+C_GREEN  = colors.HexColor("#2ecc71")
+C_ORANGE = colors.HexColor("#e67e22")
+C_PURPLE = colors.HexColor("#9b59b6")
+C_TEAL   = colors.HexColor("#1abc9c")
+C_WHITE  = colors.white
+C_YELLOW = colors.HexColor("#f39c12")
 
-        a { color: inherit; text-decoration: none; }
+def S(name, **kw):
+    return ParagraphStyle(name, **kw)
 
-        /* ── HEADER ── */
-        header {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            z-index: 100;
-            background: rgba(15,15,15,0.95);
-            backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--border);
-            height: 60px;
-            display: flex;
-            align-items: center;
-            padding: 0 24px;
-            gap: 24px;
-        }
+sTitle  = S("sTitle",  fontSize=26, textColor=C_WHITE, alignment=TA_CENTER, fontName="Helvetica-Bold", spaceAfter=6)
+sSubT   = S("sSubT",   fontSize=12, textColor=C_HL,    alignment=TA_CENTER, fontName="Helvetica", spaceAfter=4)
+sChap   = S("sChap",   fontSize=16, textColor=C_WHITE, fontName="Helvetica-Bold", spaceAfter=4, spaceBefore=4)
+sH2     = S("sH2",     fontSize=12, textColor=C_ACC,   fontName="Helvetica-Bold", spaceAfter=4, spaceBefore=8)
+sH3     = S("sH3",     fontSize=10.5, textColor=C_HL,  fontName="Helvetica-Bold", spaceAfter=3, spaceBefore=4)
+sBody   = S("sBody",   fontSize=9.5, textColor=C_DARK, fontName="Helvetica", spaceAfter=3, leading=14, alignment=TA_JUSTIFY)
+sMono   = S("sMono",   fontSize=9,   textColor=C_BLUE, fontName="Courier", spaceAfter=2, leading=13)
+sNote   = S("sNote",   fontSize=8.5, textColor=colors.HexColor("#777777"), fontName="Helvetica-Oblique", spaceAfter=2)
+sFormula= S("sFormula",fontSize=9.5, textColor=C_BLUE, fontName="Courier-Bold", spaceAfter=2, leading=14)
+sWarn   = S("sWarn",   fontSize=9,   textColor=C_HL,   fontName="Helvetica-Bold", spaceAfter=2)
+sCorr   = S("sCorr",   fontSize=9,   textColor=colors.HexColor("#1e8449"), fontName="Helvetica", spaceAfter=2, leading=13)
+sCorrB  = S("sCorrB",  fontSize=9.5, textColor=colors.HexColor("#1e8449"), fontName="Helvetica-Bold", spaceAfter=2)
+sDiff   = S("sDiff",   fontSize=8,   textColor=C_WHITE, fontName="Helvetica-Bold", alignment=TA_CENTER)
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-family: 'Syne', sans-serif;
-            font-size: 18px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            white-space: nowrap;
-        }
-        .logo svg { width: 28px; height: 28px; }
-        .logo span { color: var(--accent); }
+def chap_header(num, title, color=C_ACC, emoji=""):
+    data = [[Paragraph(f"{emoji}  CHAPITRE {num}  —  {title}", sChap)]]
+    t = Table(data, colWidths=[doc.width])
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), color),
+        ("TOPPADDING", (0,0), (-1,-1), 10),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 10),
+        ("LEFTPADDING", (0,0), (-1,-1), 14),
+    ]))
+    return t
 
-        .search-bar {
-            flex: 1;
-            max-width: 600px;
-            margin: 0 auto;
-            display: flex;
-            gap: 0;
-        }
-        .search-bar input {
-            flex: 1;
-            background: var(--bg3);
-            border: 1px solid var(--border);
-            border-right: none;
-            color: var(--text);
-            padding: 0 16px;
-            height: 40px;
-            border-radius: 40px 0 0 40px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .search-bar input:focus { border-color: #555; }
-        .search-bar button {
-            background: var(--bg3);
-            border: 1px solid var(--border);
-            border-left: none;
-            color: var(--muted);
-            padding: 0 18px;
-            height: 40px;
-            border-radius: 0 40px 40px 0;
-            cursor: pointer;
-            transition: background 0.2s;
-            font-size: 16px;
-        }
-        .search-bar button:hover { background: #2a2a2a; }
+def diff_badge(level):
+    colors_map = {"FACILE": C_GREEN, "MOYEN": C_ORANGE, "DIFFICILE": C_HL}
+    c = colors_map.get(level, C_BLUE)
+    t = Table([[Paragraph(level, sDiff)]], colWidths=[2.2*cm], rowHeights=[0.5*cm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), c),
+        ("TOPPADDING", (0,0), (-1,-1), 2),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 2),
+        ("LEFTPADDING", (0,0), (-1,-1), 4),
+        ("RIGHTPADDING", (0,0), (-1,-1), 4),
+    ]))
+    return t
 
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-left: auto;
-        }
-        .btn-upload {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 7px 16px;
-            border-radius: 40px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s, border-color 0.2s;
-        }
-        .btn-upload:hover { background: var(--bg3); border-color: #444; }
-        .btn-signin {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            background: transparent;
-            border: 1.5px solid #3ea6ff;
-            color: #3ea6ff;
-            padding: 7px 16px;
-            border-radius: 40px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-signin:hover { background: rgba(62,166,255,0.1); }
+def exo_box(num, title, content_list, level="FACILE", color=C_ACC):
+    colors_map = {"FACILE": colors.HexColor("#eafaf1"), "MOYEN": colors.HexColor("#fef9e7"), "DIFFICILE": colors.HexColor("#fdedec")}
+    border_map = {"FACILE": C_GREEN, "MOYEN": C_ORANGE, "DIFFICILE": C_HL}
+    bg = colors_map.get(level, C_LIGHT)
+    border = border_map.get(level, C_ACC)
 
-        /* ── LAYOUT ── */
-        .layout {
-            display: flex;
-            min-height: 100vh;
-            padding-top: 60px;
-        }
+    header = Table([[Paragraph(f"Exercice {num} — {title}", S("eh", fontSize=10, textColor=C_WHITE, fontName="Helvetica-Bold")),
+                     Paragraph(level, sDiff)]],
+                   colWidths=[doc.width-2.5*cm, 2.2*cm])
+    header.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), color),
+        ("TOPPADDING", (0,0), (-1,-1), 6),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 6),
+        ("LEFTPADDING", (0,0), (0,0), 10),
+        ("RIGHTPADDING", (0,0), (-1,-1), 6),
+        ("ALIGN", (1,0), (1,0), "RIGHT"),
+        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+    ]))
 
-        /* ── SIDEBAR ── */
-        aside {
-            width: 240px;
-            min-width: 240px;
-            background: var(--bg);
-            border-right: 1px solid var(--border);
-            padding: 16px 0;
-            position: sticky;
-            top: 60px;
-            height: calc(100vh - 60px);
-            overflow-y: auto;
-        }
+    inner_data = [[item] for item in content_list]
+    inner = Table([[content_list]], colWidths=[doc.width])
+    inner.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), bg),
+        ("LEFTPADDING", (0,0), (-1,-1), 12),
+        ("RIGHTPADDING", (0,0), (-1,-1), 12),
+        ("TOPPADDING", (0,0), (-1,-1), 8),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 8),
+        ("BOX", (0,0), (-1,-1), 1.5, border),
+    ]))
 
-        .sidebar-section { padding: 8px 0; border-bottom: 1px solid var(--border); }
-        .sidebar-section:last-child { border-bottom: none; }
+    wrapper = Table([[header], [inner]], colWidths=[doc.width])
+    wrapper.setStyle(TableStyle([
+        ("TOPPADDING", (0,0), (-1,-1), 0),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 0),
+        ("LEFTPADDING", (0,0), (-1,-1), 0),
+        ("RIGHTPADDING", (0,0), (-1,-1), 0),
+        ("BOX", (0,0), (-1,-1), 1.5, border),
+    ]))
+    return wrapper
 
-        .sidebar-item {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            padding: 10px 16px;
-            border-radius: 10px;
-            margin: 2px 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 400;
-            color: var(--text);
-            transition: background 0.15s;
-        }
-        .sidebar-item:hover { background: var(--bg3); }
-        .sidebar-item.active { background: var(--bg3); font-weight: 600; }
-        .sidebar-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+def corr_box(content_list):
+    t = Table([[content_list]], colWidths=[doc.width])
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), colors.HexColor("#f0fff4")),
+        ("LEFTPADDING", (0,0), (-1,-1), 12),
+        ("RIGHTPADDING", (0,0), (-1,-1), 12),
+        ("TOPPADDING", (0,0), (-1,-1), 6),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 6),
+        ("BOX", (0,0), (-1,-1), 1.5, C_GREEN),
+    ]))
+    return t
 
-        .sidebar-label {
-            padding: 18px 16px 8px;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-        }
+def answer_lines(n=3):
+    items = []
+    for _ in range(n):
+        items.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#bbbbbb"), spaceAfter=10, spaceBefore=2))
+    return items
 
-        /* ── MAIN CONTENT ── */
-        main {
-            flex: 1;
-            min-width: 0;
-            padding: 24px 32px;
-        }
+story = []
 
-        /* ── CHIPS ── */
-        .chips {
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            padding-bottom: 8px;
-            margin-bottom: 28px;
-            scrollbar-width: none;
-        }
-        .chips::-webkit-scrollbar { display: none; }
+# ── PAGE DE GARDE ──────────────────────────────────────────────────────────────
+story.append(Spacer(1, 2.5*cm))
+t = Table([[Paragraph("📝  CAHIER D'EXERCICES", sTitle)]], colWidths=[doc.width])
+t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1), C_ACC),
+                        ("TOPPADDING",(0,0),(-1,-1),14),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),14)]))
+story.append(t)
+story.append(Spacer(1, 0.4*cm))
+sub = Table([[Paragraph("MATHÉMATIQUES BTS — ENTRAÎNEMENT COMPLET AVEC CORRECTIONS", sSubT)]], colWidths=[doc.width])
+sub.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1), C_HL),
+                          ("TOPPADDING",(0,0),(-1,-1),8),
+                          ("BOTTOMPADDING",(0,0),(-1,-1),8)]))
+story.append(sub)
+story.append(Spacer(1, 1*cm))
 
-        .chip {
-            background: var(--bg3);
-            border: none;
-            color: var(--text);
-            padding: 7px 14px;
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: background 0.15s;
-        }
-        .chip:hover { background: #2a2a2a; }
-        .chip.active { background: var(--text); color: var(--bg); }
+legend = [
+    ["", "FACILE", "MOYEN", "DIFFICILE"],
+    ["Niveau", "Bases & méthodes", "Application directe", "Raisonnement complet"],
+]
+lt = Table(legend, colWidths=[2.5*cm, 4*cm, 4*cm, doc.width-10.5*cm])
+lt.setStyle(TableStyle([
+    ("BACKGROUND", (1,0),(1,1), C_GREEN),
+    ("BACKGROUND", (2,0),(2,1), C_ORANGE),
+    ("BACKGROUND", (3,0),(3,1), C_HL),
+    ("BACKGROUND", (0,0),(0,1), C_ACC),
+    ("TEXTCOLOR", (0,0),(-1,0), C_WHITE),
+    ("TEXTCOLOR", (1,0),(-1,1), C_WHITE),
+    ("FONTNAME", (0,0),(-1,-1), "Helvetica-Bold"),
+    ("ALIGN", (0,0),(-1,-1), "CENTER"),
+    ("VALIGN", (0,0),(-1,-1), "MIDDLE"),
+    ("GRID", (0,0),(-1,-1), 0.5, C_WHITE),
+    ("TOPPADDING", (0,0),(-1,-1), 6),
+    ("BOTTOMPADDING", (0,0),(-1,-1), 6),
+    ("FONTSIZE", (0,0),(-1,-1), 9),
+]))
+story.append(lt)
+story.append(Spacer(1, 1*cm))
 
-        /* ── HERO BANNER ── */
-        .hero-banner {
-            background: linear-gradient(135deg, #1a0a0a 0%, #0f0f0f 40%, #0a0f1a 100%);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 56px 48px;
-            margin-bottom: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 40px;
-            position: relative;
-            overflow: hidden;
-        }
-        .hero-banner::before {
-            content: '';
-            position: absolute;
-            width: 400px; height: 400px;
-            background: radial-gradient(circle, rgba(255,68,68,0.15) 0%, transparent 70%);
-            top: -100px; right: -50px;
-            pointer-events: none;
-        }
-        .hero-banner::after {
-            content: '';
-            position: absolute;
-            width: 300px; height: 300px;
-            background: radial-gradient(circle, rgba(62,166,255,0.08) 0%, transparent 70%);
-            bottom: -80px; left: 100px;
-            pointer-events: none;
-        }
-        .hero-text { position: relative; z-index: 1; max-width: 500px; }
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(255,68,68,0.15);
-            border: 1px solid rgba(255,68,68,0.3);
-            color: var(--accent);
-            padding: 4px 12px;
-            border-radius: 40px;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            margin-bottom: 16px;
-        }
-        .hero-badge::before { content: '●'; font-size: 8px; animation: blink 1.5s infinite; }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+toc = [
+    ["Chapitre", "Exercices", "Pages"],
+    ["1 — Numération (Binaire & Hexa)",    "5 exercices", "2"],
+    ["2 — Suites Numériques",              "5 exercices", "4"],
+    ["3 — Matrices",                       "5 exercices", "6"],
+    ["4 — Probabilités",                   "5 exercices", "8"],
+    ["5 — Table de Karnaugh",              "4 exercices", "10"],
+    ["CORRECTIONS COMPLÈTES",              "Tous chapitres","12"],
+]
+tt = Table(toc, colWidths=[9*cm, 4*cm, doc.width-13*cm])
+tt.setStyle(TableStyle([
+    ("BACKGROUND", (0,0),(-1,0), C_DARK),
+    ("TEXTCOLOR", (0,0),(-1,0), C_WHITE),
+    ("FONTNAME", (0,0),(-1,0), "Helvetica-Bold"),
+    ("FONTSIZE", (0,0),(-1,-1), 9),
+    ("ROWBACKGROUNDS", (0,1),(-1,-1), [C_LIGHT, C_WHITE]),
+    ("GRID", (0,0),(-1,-1), 0.4, colors.HexColor("#cccccc")),
+    ("ALIGN", (0,0),(-1,-1), "CENTER"),
+    ("VALIGN", (0,0),(-1,-1), "MIDDLE"),
+    ("TOPPADDING", (0,0),(-1,-1), 6),
+    ("BOTTOMPADDING", (0,0),(-1,-1), 6),
+]))
+story.append(tt)
+story.append(PageBreak())
 
-        .hero-text h1 {
-            font-family: 'Syne', sans-serif;
-            font-size: 42px;
-            font-weight: 800;
-            line-height: 1.1;
-            letter-spacing: -1px;
-            margin-bottom: 16px;
-        }
-        .hero-text h1 em {
-            font-style: normal;
-            background: linear-gradient(90deg, var(--accent), var(--accent2));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .hero-text p { color: var(--muted); font-size: 15px; margin-bottom: 28px; max-width: 380px; }
-        .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-            border: none;
-            padding: 11px 24px;
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
-        }
-        .btn-primary:hover { background: #e53939; transform: translateY(-1px); }
-        .btn-secondary {
-            background: transparent;
-            color: var(--text);
-            border: 1px solid var(--border);
-            padding: 11px 24px;
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-secondary:hover { background: var(--bg3); }
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CHAPITRE 1 — NUMÉRATION
+# ═══════════════════════════════════════════════════════════════════════════════
+story.append(chap_header("1", "NUMÉRATION — Binaire & Hexadécimal", C_ACC, "💻"))
+story.append(Spacer(1, 0.5*cm))
 
-        .hero-visual {
-            position: relative;
-            z-index: 1;
-            flex-shrink: 0;
-        }
-        .play-card {
-            width: 220px;
-            height: 140px;
-            background: var(--bg3);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-        .play-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(255,68,68,0.1), transparent);
-        }
-        .play-btn-big {
-            width: 56px; height: 56px;
-            background: var(--accent);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            z-index: 1;
-        }
-        .play-btn-big svg { width: 24px; height: 24px; fill: white; margin-left: 3px; }
-        .hero-stats {
-            display: flex;
-            gap: 24px;
-            margin-top: 16px;
-        }
-        .stat { text-align: center; }
-        .stat-num {
-            font-family: 'Syne', sans-serif;
-            font-size: 20px;
-            font-weight: 700;
-        }
-        .stat-label { font-size: 11px; color: var(--subtle); }
+# EXO 1
+story.append(exo_box(1, "Décimal → Binaire", [
+    Paragraph("Convertis les nombres suivants en binaire (méthode des divisions par 2) :", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  18  =  ................................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  37  =  ................................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  100  =  ................................", sBody),
+    Spacer(1,0.2*cm),
+    Paragraph("💡 Rappel : divise par 2, note les restes, lis de bas en haut.", sNote),
+], "FACILE", C_ACC))
+story.append(Spacer(1, 0.4*cm))
 
-        /* ── SECTION TITLE ── */
-        .section-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-        .section-header h2 {
-            font-family: 'Syne', sans-serif;
-            font-size: 20px;
-            font-weight: 700;
-            letter-spacing: -0.3px;
-        }
-        .see-all {
-            font-size: 13px;
-            color: #3ea6ff;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        .see-all:hover { text-decoration: underline; }
+# EXO 2
+story.append(exo_box(2, "Binaire → Décimal", [
+    Paragraph("Convertis les nombres binaires suivants en décimal :", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  1010(2)     =  ..................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  11001(2)    =  ..................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  101101(2)   =  ..................", sBody),
+    Spacer(1,0.2*cm),
+    Paragraph("💡 Rappel : multiplie chaque bit par 2 puissance sa position (commence à 0 à droite).", sNote),
+], "FACILE", C_ACC))
+story.append(Spacer(1, 0.4*cm))
 
-        /* ── VIDEO GRID ── */
-        .video-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-            margin-bottom: 48px;
-        }
+# EXO 3
+story.append(exo_box(3, "Décimal → Hexadécimal", [
+    Paragraph("Convertis les nombres suivants en hexadécimal :", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  16   =  ..................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  255  =  ..................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  512  =  ..................", sBody),
+    Spacer(1,0.2*cm),
+    Paragraph("💡 Rappel : divise par 16, 10=A, 11=B, 12=C, 13=D, 14=E, 15=F.", sNote),
+], "MOYEN", C_ACC))
+story.append(Spacer(1, 0.4*cm))
 
-        .video-card {
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .video-card:hover { transform: translateY(-3px); }
+# EXO 4
+story.append(exo_box(4, "Hexadécimal → Décimal", [
+    Paragraph("Convertis les nombres hexadécimaux suivants en décimal :", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  F(16)    =  ..................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  1A(16)   =  ..................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  3F2(16)  =  ..................", sBody),
+    Spacer(1,0.2*cm),
+    Paragraph("💡 Rappel : multiplie chaque chiffre par 16 puissance sa position.", sNote),
+], "MOYEN", C_ACC))
+story.append(Spacer(1, 0.4*cm))
 
-        .thumb {
-            width: 100%;
-            aspect-ratio: 16/9;
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-            background: var(--bg3);
-            margin-bottom: 12px;
-        }
-        .thumb-img {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            transition: transform 0.3s;
-        }
-        .video-card:hover .thumb-img { transform: scale(1.05); }
+# EXO 5
+story.append(exo_box(5, "Addition Binaire", [
+    Paragraph("Effectue les additions suivantes en binaire, puis vérifie en repassant en décimal :", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  1010(2)  +  0101(2)  =  ..................   Vérif : ...... + ...... = ......", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  1111(2)  +  0001(2)  =  ..................   Vérif : ...... + ...... = ......", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  1101(2)  +  1011(2)  =  ..................   Vérif : ...... + ...... = ......", sBody),
+    Spacer(1,0.2*cm),
+    Paragraph("💡 Rappel : 1+1 = 10 (0 et on retient 1), 1+1+1 = 11 (1 et on retient 1).", sNote),
+], "DIFFICILE", C_ACC))
+story.append(PageBreak())
 
-        .thumb-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        .video-card:hover .thumb-overlay { opacity: 1; }
-        .play-icon {
-            width: 44px; height: 44px;
-            background: rgba(255,255,255,0.95);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .play-icon svg { width: 18px; height: 18px; fill: black; margin-left: 2px; }
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CHAPITRE 2 — SUITES
+# ═══════════════════════════════════════════════════════════════════════════════
+story.append(chap_header("2", "SUITES NUMÉRIQUES", C_PURPLE, "📈"))
+story.append(Spacer(1, 0.5*cm))
 
-        .duration-badge {
-            position: absolute;
-            bottom: 8px; right: 8px;
-            background: rgba(0,0,0,0.85);
-            color: white;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
+story.append(exo_box(6, "Reconnaître le type de suite", [
+    Paragraph("Pour chaque suite, dis si elle est arithmétique, géométrique ou ni l'une ni l'autre. "
+              "Si elle l'est, donne la raison.", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  2, 5, 8, 11, 14, ...     Type : ............   Raison : ............", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  3, 6, 12, 24, 48, ...    Type : ............   Raison : ............", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  1, 4, 9, 16, 25, ...     Type : ............   Raison : ............", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("d)  100, 90, 80, 70, ...     Type : ............   Raison : ............", sBody),
+], "FACILE", C_PURPLE))
+story.append(Spacer(1, 0.4*cm))
 
-        .thumb-g1 { background: linear-gradient(135deg, #1a1a2e, #16213e); }
-        .thumb-g2 { background: linear-gradient(135deg, #1a0a0a, #2d1515); }
-        .thumb-g3 { background: linear-gradient(135deg, #0a1a0a, #152d15); }
-        .thumb-g4 { background: linear-gradient(135deg, #1a150a, #2d2415); }
-        .thumb-g5 { background: linear-gradient(135deg, #0f0f0f, #1f1f2e); }
-        .thumb-g6 { background: linear-gradient(135deg, #1a0a1a, #2d152d); }
+story.append(exo_box(7, "Terme général et calcul", [
+    Paragraph("Suite arithmétique : u(0) = 6,  raison r = 3", sBody),
+    Spacer(1, 0.15*cm),
+    Paragraph("a)  Écrire la formule du terme général u(n) = .............................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  Calculer u(15) = .............................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  Calculer la somme des 10 premiers termes S = .............................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("   (u(0)=6, u(9)=?) →  S = .............................", sBody),
+    Spacer(1,0.2*cm),
+    Paragraph("💡 Rappel : u(n) = u(0) + n×r  /  S = nb_termes × (premier+dernier) / 2", sNote),
+], "FACILE", C_PURPLE))
+story.append(Spacer(1, 0.4*cm))
 
-        .video-meta { display: flex; gap: 10px; }
-        .avatar {
-            width: 34px; height: 34px;
-            border-radius: 50%;
-            background: var(--bg3);
-            border: 2px solid var(--border);
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--muted);
-        }
-        .video-info { flex: 1; min-width: 0; }
-        .video-title {
-            font-size: 14px;
-            font-weight: 600;
-            line-height: 1.4;
-            margin-bottom: 4px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .video-channel { font-size: 12px; color: var(--subtle); margin-bottom: 2px; }
-        .video-stats { font-size: 12px; color: var(--subtle); }
-        .video-stats span::after { content: ' · '; }
-        .video-stats span:last-child::after { content: ''; }
+story.append(exo_box(8, "Suite géométrique", [
+    Paragraph("Suite géométrique : u(0) = 5,  raison q = 2", sBody),
+    Spacer(1, 0.15*cm),
+    Paragraph("a)  Écrire la formule du terme général u(n) = .............................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  Calculer u(4) = .............................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  Calculer la somme des 5 premiers termes (u(0) à u(4)) :", sBody),
+    Paragraph("   S = .............................", sBody),
+    Spacer(1,0.2*cm),
+    Paragraph("💡 Rappel : u(n) = u(0)×q^n  /  S = u(0)×(1-q^(n+1))/(1-q)", sNote),
+], "MOYEN", C_PURPLE))
+story.append(Spacer(1, 0.4*cm))
 
-        /* ── FEATURED ROW ── */
-        .featured-row {
-            display: grid;
-            grid-template-columns: 1.6fr 1fr;
-            gap: 20px;
-            margin-bottom: 48px;
-        }
-        .featured-card {
-            background: var(--bg2);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: border-color 0.2s, transform 0.2s;
-        }
-        .featured-card:hover { border-color: #444; transform: translateY(-2px); }
+story.append(exo_box(9, "Trouver un rang", [
+    Paragraph("Suite arithmétique : u(n) = 4 + 7n", sBody),
+    Spacer(1, 0.15*cm),
+    Paragraph("a)  À partir de quel rang n a-t-on u(n) > 200 ?", sBody),
+    Paragraph("   Calcul : .....................................................................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  Vérification : u(......) = .............. et u(......) = ..............", sBody),
+], "MOYEN", C_PURPLE))
+story.append(Spacer(1, 0.4*cm))
 
-        .featured-thumb {
-            width: 100%;
-            aspect-ratio: 16/9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            position: relative;
-        }
-        .featured-thumb::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);
-        }
-        .featured-thumb-label {
-            position: absolute;
-            bottom: 16px; left: 16px;
-            z-index: 1;
-            font-family: 'Syne', sans-serif;
-            font-size: 20px;
-            font-weight: 700;
-            line-height: 1.2;
-        }
+story.append(exo_box(10, "Problème financier", [
+    Paragraph("Un compte bancaire contient 2000 €. Il augmente de 4% chaque année.", sBody),
+    Spacer(1, 0.15*cm),
+    Paragraph("a)  Quelle est la nature de cette suite ? .....................................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  Écrire la formule de u(n) (capital après n années) :", sBody),
+    Paragraph("   u(n) = .............................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  Au bout de combien d'années le capital dépasse-t-il 3000 € ?", sBody),
+    Paragraph("   On donne : ln(1,5) ≈ 0,405  et  ln(1,04) ≈ 0,039", sBody),
+    Paragraph("   Calcul : .....................................................................", sBody),
+    Paragraph("   Réponse : .................. années", sBody),
+], "DIFFICILE", C_PURPLE))
+story.append(PageBreak())
 
-        .featured-body { padding: 16px 18px; }
-        .featured-body h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
-        .featured-body p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CHAPITRE 3 — MATRICES
+# ═══════════════════════════════════════════════════════════════════════════════
+story.append(chap_header("3", "LES MATRICES", C_TEAL, "🔢"))
+story.append(Spacer(1, 0.5*cm))
 
-        .side-list { display: flex; flex-direction: column; gap: 2px; }
-        .side-item {
-            display: flex;
-            gap: 12px;
-            padding: 10px 12px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-        .side-item:hover { background: var(--bg3); }
-        .side-thumb {
-            width: 96px;
-            height: 60px;
-            border-radius: 8px;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            position: relative;
-        }
-        .side-info { flex: 1; min-width: 0; }
-        .side-title { font-size: 13px; font-weight: 500; line-height: 1.4; margin-bottom: 4px; }
-        .side-meta { font-size: 12px; color: var(--subtle); }
+story.append(exo_box(11, "Addition et soustraction", [
+    Paragraph("Soit  A = | 3  1 |   et   B = | 2  5 |", sMono),
+    Paragraph("          | 2  4 |             | 1  0 |", sMono),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  Calculer A + B  =  | ....  .... |", sBody),
+    Paragraph("                       | ....  .... |", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  Calculer A - B  =  | ....  .... |", sBody),
+    Paragraph("                       | ....  .... |", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  Calculer 2A     =  | ....  .... |", sBody),
+    Paragraph("                       | ....  .... |", sBody),
+], "FACILE", C_TEAL))
+story.append(Spacer(1, 0.4*cm))
 
-        /* ── CHANNEL STRIP ── */
-        .channel-strip {
-            display: flex;
-            gap: 16px;
-            overflow-x: auto;
-            padding-bottom: 8px;
-            margin-bottom: 40px;
-            scrollbar-width: none;
-        }
-        .channel-strip::-webkit-scrollbar { display: none; }
-        .channel-pill {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: transform 0.15s;
-            min-width: 72px;
-        }
-        .channel-pill:hover { transform: scale(1.05); }
-        .channel-avatar {
-            width: 64px; height: 64px;
-            border-radius: 50%;
-            border: 2px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            transition: border-color 0.2s;
-        }
-        .channel-pill:hover .channel-avatar { border-color: var(--accent); }
-        .channel-name { font-size: 11px; color: var(--muted); text-align: center; white-space: nowrap; }
+story.append(exo_box(12, "Multiplication de matrices 2×2", [
+    Paragraph("Soit  A = | 1  2 |   et   B = | 3  0 |", sMono),
+    Paragraph("          | 3  4 |             | 1  2 |", sMono),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  Calculer A × B :", sBody),
+    Paragraph("   C[1,1] = 1×... + 2×... = ....  C[1,2] = 1×... + 2×... = ....", sMono),
+    Paragraph("   C[2,1] = 3×... + 4×... = ....  C[2,2] = 3×... + 4×... = ....", sMono),
+    Spacer(1,0.1*cm),
+    Paragraph("   A × B =  | ....  .... |", sBody),
+    Paragraph("             | ....  .... |", sBody),
+    Spacer(1,0.2*cm),
+    Paragraph("b)  Est-ce que A×B = B×A ? Calcule B×A pour vérifier.", sBody),
+    Paragraph("   B × A =  | ....  .... |", sBody),
+    Paragraph("             | ....  .... |", sBody),
+    Paragraph("   Conclusion : .................................................................", sBody),
+], "MOYEN", C_TEAL))
+story.append(Spacer(1, 0.4*cm))
 
-        /* ── SCROLLBAR ── */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg); }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+story.append(exo_box(13, "Vérification avec la matrice identité", [
+    Paragraph("Soit  A = | 2  3 |   et   I = | 1  0 |", sMono),
+    Paragraph("          | 1  4 |             | 0  1 |", sMono),
+    Spacer(1, 0.2*cm),
+    Paragraph("Calcule A × I et vérifie que le résultat = A :", sBody),
+    Spacer(1,0.1*cm),
+    Paragraph("   C[1,1] = ....   C[1,2] = ....   C[2,1] = ....   C[2,2] = ....", sMono),
+    Spacer(1,0.1*cm),
+    Paragraph("   A × I =  | ....  .... |      C'est bien égal à A ? ......", sBody),
+    Paragraph("             | ....  .... |", sBody),
+], "FACILE", C_TEAL))
+story.append(Spacer(1, 0.4*cm))
 
-        /* ── RESPONSIVE ── */
-        @media (max-width: 900px) {
-            aside { display: none; }
-            .featured-row { grid-template-columns: 1fr; }
-            .hero-visual { display: none; }
-            main { padding: 20px 16px; }
-        }
-        @media (max-width: 600px) {
-            .hero-banner { padding: 32px 24px; }
-            .hero-text h1 { font-size: 28px; }
-            header { padding: 0 16px; gap: 12px; }
-            .search-bar { max-width: 200px; }
-        }
-    </style>
-</head>
-<body>
+story.append(exo_box(14, "Matrices non carrées", [
+    Paragraph("Soit  A = | 1  2  3 |   (2×3)   et   B = | 1  0 |   (3×2)", sMono),
+    Paragraph("          | 4  5  6 |                     | 2  1 |", sMono),
+    Paragraph("                                          | 0  3 |", sMono),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  La multiplication A×B est-elle possible ? Taille du résultat ?", sBody),
+    Paragraph("   Réponse : .................................................................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  Calculer A × B :", sBody),
+    Paragraph("   C[1,1] = 1×1+2×2+3×0 = ....   C[1,2] = 1×0+2×1+3×3 = ....", sMono),
+    Paragraph("   C[2,1] = ......................   C[2,2] = ......................", sMono),
+    Spacer(1,0.1*cm),
+    Paragraph("   A × B =  | ....  .... |", sBody),
+    Paragraph("             | ....  .... |", sBody),
+], "MOYEN", C_TEAL))
+story.append(Spacer(1, 0.4*cm))
 
-<!-- HEADER -->
-<header>
-    <div class="logo">
-        <svg viewBox="0 0 28 28" fill="none">
-            <rect width="28" height="28" rx="7" fill="#ff4444"/>
-            <path d="M11 8L21 14L11 20V8Z" fill="white"/>
-        </svg>
-        GEMINI<span>LABS</span>
-    </div>
-    <div class="search-bar">
-        <input type="text" placeholder="Rechercher des projets, tutoriels…">
-        <button>🔍</button>
-    </div>
-    <div class="header-actions">
-        <button class="btn-upload">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-            Créer
-        </button>
-        <button class="btn-signin">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-            Se connecter
-        </button>
-    </div>
-</header>
+story.append(exo_box(15, "Transposée et puissance", [
+    Paragraph("Soit  A = | 2  1 |", sMono),
+    Paragraph("          | 3  4 |", sMono),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  Écrire la transposée A^T :", sBody),
+    Paragraph("   A^T = | ....  .... |", sBody),
+    Paragraph("          | ....  .... |", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  Calculer A² = A × A :", sBody),
+    Paragraph("   A² = | ....  .... |", sBody),
+    Paragraph("         | ....  .... |", sBody),
+], "DIFFICILE", C_TEAL))
+story.append(PageBreak())
 
-<!-- LAYOUT -->
-<div class="layout">
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CHAPITRE 4 — PROBABILITÉS
+# ═══════════════════════════════════════════════════════════════════════════════
+story.append(chap_header("4", "LES PROBABILITÉS", C_GREEN, "🎲"))
+story.append(Spacer(1, 0.5*cm))
 
-    <!-- SIDEBAR -->
-    <aside>
-        <div class="sidebar-section">
-            <div class="sidebar-item active">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-                Accueil
-            </div>
-            <div class="sidebar-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                Explorer
-            </div>
-            <div class="sidebar-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                Shorts
-            </div>
-            <div class="sidebar-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.82 19.79 19.79 0 01.13 1.18 2 2 0 012.11 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.09a16 16 0 006 6l.46-.46a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-                Abonnements
-            </div>
-        </div>
-        <div class="sidebar-section">
-            <div class="sidebar-label">Bibliothèque</div>
-            <div class="sidebar-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                Historique
-            </div>
-            <div class="sidebar-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-                Enregistrés
-            </div>
-            <div class="sidebar-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                À regarder plus tard
-            </div>
-            <div class="sidebar-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19V6l12-3v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg>
-                Playlists
-            </div>
-        </div>
-        <div class="sidebar-section">
-            <div class="sidebar-label">Explorer</div>
-            <div class="sidebar-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                Tendances
-            </div>
-            <div class="sidebar-item">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
-                Chaînes
-            </div>
-            <div class="sidebar-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                En direct
-            </div>
-        </div>
-    </aside>
+story.append(exo_box(16, "Complémentaire et événements", [
+    Paragraph("On lance un dé à 6 faces équilibré. On définit A = 'obtenir un nombre pair'.", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  Quelle est la probabilité P(A) = ................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  Quelle est la probabilité de l'événement contraire P(non-A) = ................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  Soit B = 'obtenir un nombre > 4'. Calculer P(B) = ................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("d)  Calculer P(A ∪ B)  (pair OU supérieur à 4) = ................", sBody),
+    Paragraph("   Rappel : P(A∪B) = P(A) + P(B) - P(A∩B)", sNote),
+], "FACILE", C_GREEN))
+story.append(Spacer(1, 0.4*cm))
 
-    <!-- MAIN -->
-    <main>
+story.append(exo_box(17, "Arbre de probabilités", [
+    Paragraph("Un sac contient 5 billes rouges et 3 billes bleues. "
+              "On tire deux billes successivement SANS remise.", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  Compléter l'arbre :", sBody),
+    Spacer(1,0.1*cm),
+    Paragraph("   1er tirage : P(Rouge) = 5/8         P(Bleue) = 3/8", sMono),
+    Paragraph("   Si 1er Rouge : P(R|R) = ....         P(B|R) = ....", sMono),
+    Paragraph("   Si 1er Bleue : P(R|B) = ....         P(B|B) = ....", sMono),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  P(Rouge puis Rouge)  = .... × .... = ................", sBody),
+    Spacer(1,0.1*cm),
+    Paragraph("c)  P(Bleue puis Bleue)  = .... × .... = ................", sBody),
+    Spacer(1,0.1*cm),
+    Paragraph("d)  P(même couleur) = .................. + .................. = ...........", sBody),
+    Spacer(1,0.1*cm),
+    Paragraph("e)  P(couleurs différentes) = 1 - P(même couleur) = ...........", sBody),
+], "MOYEN", C_GREEN))
+story.append(Spacer(1, 0.4*cm))
 
-        <!-- CHIPS -->
-        <div class="chips">
-            <button class="chip active">Tout</button>
-            <button class="chip">Design</button>
-            <button class="chip">Développement</button>
-            <button class="chip">UI/UX</button>
-            <button class="chip">Motion</button>
-            <button class="chip">Branding</button>
-            <button class="chip">Typographie</button>
-            <button class="chip">3D</button>
-            <button class="chip">Systèmes de design</button>
-            <button class="chip">CSS avancé</button>
-            <button class="chip">Tendances</button>
-            <button class="chip">Tutoriels</button>
-        </div>
+story.append(exo_box(18, "Probabilités totales", [
+    Paragraph("Une usine fabrique des pièces sur 2 machines :", sBody),
+    Paragraph("• Machine A produit 60% des pièces, avec 5% de défauts", sBody),
+    Paragraph("• Machine B produit 40% des pièces, avec 10% de défauts", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  Calculer P(pièce défectueuse) avec la formule des probabilités totales :", sBody),
+    Paragraph("   P(D) = P(D|A)×P(A) + P(D|B)×P(B)", sBody),
+    Paragraph("        = ....×.... + ....×.... = ................", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  Si une pièce est défectueuse, quelle est la probabilité qu'elle vienne de A ?", sBody),
+    Paragraph("   P(A|D) = P(D|A)×P(A) / P(D) = ....×.... / .... = ...........", sBody),
+], "MOYEN", C_GREEN))
+story.append(Spacer(1, 0.4*cm))
 
-        <!-- HERO BANNER -->
-        <div class="hero-banner">
-            <div class="hero-text">
-                <div class="hero-badge">En live maintenant</div>
-                <h1>Design <em>Futuriste</em><br>& Développement Web</h1>
-                <p>Des tutoriels, projets et ressources conçus pour les développeurs et designers qui veulent repousser les limites du web moderne.</p>
-                <div class="hero-actions">
-                    <button class="btn-primary">▶ Regarder maintenant</button>
-                    <button class="btn-secondary">Explorer les projets</button>
-                </div>
-            </div>
-            <div class="hero-visual">
-                <div class="play-card">
-                    <div class="thumb-img thumb-g1" style="position:absolute;inset:0;"></div>
-                    <div class="play-btn-big">
-                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    </div>
-                </div>
-                <div class="hero-stats">
-                    <div class="stat"><div class="stat-num">2.4M</div><div class="stat-label">Vues</div></div>
-                    <div class="stat"><div class="stat-num">48K</div><div class="stat-label">Abonnés</div></div>
-                    <div class="stat"><div class="stat-num">320</div><div class="stat-label">Projets</div></div>
-                </div>
-            </div>
-        </div>
+story.append(exo_box(19, "Espérance mathématique", [
+    Paragraph("Un jeu coûte 3€. On lance un dé :", sBody),
+    Paragraph("• Si on fait 6 → on gagne 15€  (gain net = 15-3 = +12€)", sBody),
+    Paragraph("• Si on fait 4 ou 5 → on récupère sa mise (gain net = 0€)", sBody),
+    Paragraph("• Sinon → on perd sa mise (gain net = -3€)", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  Compléter le tableau :", sBody),
+    Spacer(1,0.1*cm),
+    gain_tbl := None,
+    Spacer(1,0.1*cm),
+    Paragraph("b)  Calculer E(G) = 12×.... + 0×.... + (-3)×.... = ...........", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  Le jeu est-il rentable pour le joueur ? .................................", sBody),
+], "MOYEN", C_GREEN))
 
-        <!-- FEATURED SECTION -->
-        <div class="section-header">
-            <h2>À la une</h2>
-            <span class="see-all">Tout voir →</span>
-        </div>
-        <div class="featured-row">
-            <div class="featured-card">
-                <div class="featured-thumb thumb-g2">
-                    <span style="position:relative;z-index:1;font-size:52px;">🎨</span>
-                    <div class="featured-thumb-label">Masterclass Design<br>System 2026</div>
-                </div>
-                <div class="featured-body">
-                    <h3>Construire un Design System de A à Z — Tokens, Components, Documentation</h3>
-                    <p>Une formation complète de 6 heures pour maîtriser la création de systèmes de design scalables avec Figma et Storybook.</p>
-                </div>
-            </div>
-            <div class="featured-card" style="background:var(--bg2)">
-                <div class="side-list" style="padding:12px 8px;">
-                    <div class="side-item">
-                        <div class="side-thumb thumb-g3"><span>⚡</span></div>
-                        <div class="side-info">
-                            <div class="side-title">CSS Grid & Layouts Avancés</div>
-                            <div class="side-meta">GeminiLabs · 2.1M vues</div>
-                        </div>
-                    </div>
-                    <div class="side-item">
-                        <div class="side-thumb thumb-g4"><span>🎭</span></div>
-                        <div class="side-info">
-                            <div class="side-title">Motion Design avec Framer Motion</div>
-                            <div class="side-meta">GeminiLabs · 1.8M vues</div>
-                        </div>
-                    </div>
-                    <div class="side-item">
-                        <div class="side-thumb thumb-g5"><span>🌐</span></div>
-                        <div class="side-info">
-                            <div class="side-title">Architecture React Clean Code</div>
-                            <div class="side-meta">GeminiLabs · 3.4M vues</div>
-                        </div>
-                    </div>
-                    <div class="side-item">
-                        <div class="side-thumb thumb-g6"><span>🔮</span></div>
-                        <div class="side-info">
-                            <div class="side-title">Three.js pour les Designers</div>
-                            <div class="side-meta">GeminiLabs · 980K vues</div>
-                        </div>
-                    </div>
-                    <div class="side-item">
-                        <div class="side-thumb thumb-g1"><span>✦</span></div>
-                        <div class="side-info">
-                            <div class="side-title">Typographie Expressive sur le Web</div>
-                            <div class="side-meta">GeminiLabs · 1.2M vues</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+gain_data = [["Gain G", "+12 €", "0 €", "-3 €"],
+             ["Probabilité", "1/6", "2/6", "3/6"]]
+gain_t = Table(gain_data, colWidths=[3.5*cm, 3.5*cm, 3.5*cm, doc.width-10.5*cm])
+gain_t.setStyle(TableStyle([
+    ("BACKGROUND", (0,0),(0,-1), C_GREEN),
+    ("TEXTCOLOR", (0,0),(0,-1), C_WHITE),
+    ("FONTNAME", (0,0),(-1,-1), "Helvetica-Bold"),
+    ("ALIGN", (0,0),(-1,-1), "CENTER"),
+    ("GRID", (0,0),(-1,-1), 0.5, C_DARK),
+    ("FONTSIZE", (0,0),(-1,-1), 9),
+    ("TOPPADDING", (0,0),(-1,-1), 5),
+    ("BOTTOMPADDING", (0,0),(-1,-1), 5),
+]))
 
-        <!-- CHANNELS -->
-        <div class="section-header">
-            <h2>Chaînes populaires</h2>
-            <span class="see-all">Tout voir →</span>
-        </div>
-        <div class="channel-strip">
-            <div class="channel-pill">
-                <div class="channel-avatar" style="background:linear-gradient(135deg,#1a0a0a,#3d1515)">🎨</div>
-                <span class="channel-name">Gemini<br>Design</span>
-            </div>
-            <div class="channel-pill">
-                <div class="channel-avatar" style="background:linear-gradient(135deg,#0a1a0a,#153d15)">⚡</div>
-                <span class="channel-name">Web<br>Perf</span>
-            </div>
-            <div class="channel-pill">
-                <div class="channel-avatar" style="background:linear-gradient(135deg,#0a0a1a,#15153d)">🔮</div>
-                <span class="channel-name">3D<br>Labs</span>
-            </div>
-            <div class="channel-pill">
-                <div class="channel-avatar" style="background:linear-gradient(135deg,#1a150a,#3d2415)">🎭</div>
-                <span class="channel-name">Motion<br>Dev</span>
-            </div>
-            <div class="channel-pill">
-                <div class="channel-avatar" style="background:linear-gradient(135deg,#1a0a1a,#3d153d)">✦</div>
-                <span class="channel-name">Type<br>Studio</span>
-            </div>
-            <div class="channel-pill">
-                <div class="channel-avatar" style="background:linear-gradient(135deg,#0a1a1a,#153d3d)">📐</div>
-                <span class="channel-name">Grid<br>System</span>
-            </div>
-            <div class="channel-pill">
-                <div class="channel-avatar" style="background:linear-gradient(135deg,#0f0a1a,#251535)">🚀</div>
-                <span class="channel-name">Launch<br>Fast</span>
-            </div>
-            <div class="channel-pill">
-                <div class="channel-avatar" style="background:linear-gradient(135deg,#1a1a0a,#35350a)">🌟</div>
-                <span class="channel-name">UI<br>Stars</span>
-            </div>
-        </div>
+story.append(Spacer(1, 0.4*cm))
+story.append(exo_box(19, "Espérance mathématique", [
+    Paragraph("Un jeu coûte 3€. On lance un dé :", sBody),
+    Paragraph("• Si on fait 6 → on gagne 15€  (gain net = +12€)", sBody),
+    Paragraph("• Si on fait 4 ou 5 → on récupère sa mise (gain net = 0€)", sBody),
+    Paragraph("• Sinon → on perd sa mise (gain net = -3€)", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  Voici le tableau des gains :", sBody),
+    Spacer(1,0.1*cm),
+    gain_t,
+    Spacer(1,0.1*cm),
+    Paragraph("b)  Calculer E(G) = 12×(1/6) + 0×(2/6) + (-3)×(3/6) = ...........", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  Le jeu est-il rentable pour le joueur ? .................................", sBody),
+], "MOYEN", C_GREEN))
+story.append(Spacer(1, 0.4*cm))
 
-        <!-- VIDEO GRID -->
-        <div class="section-header">
-            <h2>Recommandés pour vous</h2>
-            <span class="see-all">Tout voir →</span>
-        </div>
-        <div class="video-grid">
+story.append(exo_box(20, "Formule de Bayes — Problème médical", [
+    Paragraph("Une maladie touche 3% de la population.", sBody),
+    Paragraph("Un test détecte la maladie dans 92% des cas si la personne est malade.", sBody),
+    Paragraph("Le test donne 5% de faux positifs (positif alors que la personne est saine).", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("a)  Construire l'arbre (compléter les probabilités) :", sBody),
+    Paragraph("   P(M) = ....   P(S) = ....   P(+|M) = ....   P(-|M) = ....   P(+|S) = ....   P(-|S) = ....", sMono),
+    Spacer(1,0.15*cm),
+    Paragraph("b)  Calculer P(+) avec la formule des probabilités totales :", sBody),
+    Paragraph("   P(+) = ....×.... + ....×.... = ...........", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("c)  Si une personne est testée positive, quelle est la probabilité qu'elle soit vraiment malade ?", sBody),
+    Paragraph("   P(M|+) = P(+|M)×P(M) / P(+) = ...........", sBody),
+    Spacer(1,0.15*cm),
+    Paragraph("d)  Commenter le résultat.", sBody),
+    Paragraph("   ..................................................................................", sBody),
+], "DIFFICILE", C_GREEN))
+story.append(PageBreak())
 
-            <div class="video-card">
-                <div class="thumb">
-                    <div class="thumb-img thumb-g1">🎨</div>
-                    <div class="thumb-overlay"><div class="play-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>
-                    <div class="duration-badge">18:24</div>
-                </div>
-                <div class="video-meta">
-                    <div class="avatar">GL</div>
-                    <div class="video-info">
-                        <div class="video-title">Comment créer une interface glassmorphism ultra-moderne en CSS pur</div>
-                        <div class="video-channel">GeminiLabs</div>
-                        <div class="video-stats"><span>842K vues</span><span>il y a 3 jours</span></div>
-                    </div>
-                </div>
-            </div>
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CHAPITRE 5 — KARNAUGH
+# ═══════════════════════════════════════════════════════════════════════════════
+story.append(chap_header("5", "TABLE DE KARNAUGH", C_HL, "⚡"))
+story.append(Spacer(1, 0.5*cm))
 
-            <div class="video-card">
-                <div class="thumb">
-                    <div class="thumb-img thumb-g2">⚡</div>
-                    <div class="thumb-overlay"><div class="play-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>
-                    <div class="duration-badge">32:11</div>
-                </div>
-                <div class="video-meta">
-                    <div class="avatar">WP</div>
-                    <div class="video-info">
-                        <div class="video-title">Performance Web 2026 : Core Web Vitals, LCP, FID, CLS expliqués</div>
-                        <div class="video-channel">Web Perf Lab</div>
-                        <div class="video-stats"><span>1.2M vues</span><span>il y a 1 semaine</span></div>
-                    </div>
-                </div>
-            </div>
+story.append(exo_box(21, "Karnaugh 2 variables — Lecture simple", [
+    Paragraph("Compléter la table de Karnaugh avec les valeurs de F, puis simplifier :", sBody),
+    Paragraph("F(A,B) = 1 pour les minterms : m0, m1, m3  (c'est-à-dire AB=00, 01, 11)", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("Table à remplir :", sBody),
+    Spacer(1,0.1*cm),
+], "FACILE", C_HL))
 
-            <div class="video-card">
-                <div class="thumb">
-                    <div class="thumb-img thumb-g3">🌐</div>
-                    <div class="thumb-overlay"><div class="play-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>
-                    <div class="duration-badge">45:07</div>
-                </div>
-                <div class="video-meta">
-                    <div class="avatar">RC</div>
-                    <div class="video-info">
-                        <div class="video-title">Architecture Micro-Frontend : découper une app React en modules indépendants</div>
-                        <div class="video-channel">React Craft</div>
-                        <div class="video-stats"><span>567K vues</span><span>il y a 2 semaines</span></div>
-                    </div>
-                </div>
-            </div>
+k2_exo = [
+    ["A \\ B", "B = 0", "B = 1"],
+    ["A = 0", "m0 = ...", "m1 = ..."],
+    ["A = 1", "m2 = ...", "m3 = ..."],
+]
+k2t_exo = Table(k2_exo, colWidths=[4*cm, 4*cm, 4*cm])
+k2t_exo.setStyle(TableStyle([
+    ("BACKGROUND", (0,0),(2,0), C_HL),
+    ("BACKGROUND", (0,0),(0,2), C_HL),
+    ("TEXTCOLOR", (0,0),(2,0), C_WHITE),
+    ("TEXTCOLOR", (0,0),(0,2), C_WHITE),
+    ("FONTNAME", (0,0),(-1,-1), "Helvetica-Bold"),
+    ("ALIGN", (0,0),(-1,-1), "CENTER"),
+    ("VALIGN", (0,0),(-1,-1), "MIDDLE"),
+    ("GRID", (0,0),(-1,-1), 1.5, C_DARK),
+    ("FONTSIZE", (0,0),(-1,-1), 10),
+    ("TOPPADDING", (0,0),(-1,-1), 12),
+    ("BOTTOMPADDING", (0,0),(-1,-1), 12),
+]))
+story.append(k2t_exo)
+story.append(Spacer(1,0.3*cm))
+story.append(Paragraph("Groupement possible : ...............................................", sBody))
+story.append(Paragraph("Résultat simplifié : F = ...............................................", sBody))
+story.append(Spacer(1, 0.5*cm))
 
-            <div class="video-card">
-                <div class="thumb">
-                    <div class="thumb-img thumb-g4">🎭</div>
-                    <div class="thumb-overlay"><div class="play-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>
-                    <div class="duration-badge">22:48</div>
-                </div>
-                <div class="video-meta">
-                    <div class="avatar">MD</div>
-                    <div class="video-info">
-                        <div class="video-title">Créer des animations de scroll cinématographiques avec GSAP ScrollTrigger</div>
-                        <div class="video-channel">Motion Dev</div>
-                        <div class="video-stats"><span>390K vues</span><span>il y a 4 jours</span></div>
-                    </div>
-                </div>
-            </div>
+story.append(exo_box(22, "Karnaugh 3 variables", [
+    Paragraph("F(A,B,C) = somme des minterms : m0, m2, m4, m6", sBody),
+    Paragraph("(Rappel ordre : 00, 01, 11, 10 pour BC)", sBody),
+    Spacer(1, 0.2*cm),
+], "MOYEN", C_HL))
 
-            <div class="video-card">
-                <div class="thumb">
-                    <div class="thumb-img thumb-g5">🔮</div>
-                    <div class="thumb-overlay"><div class="play-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>
-                    <div class="duration-badge">1:12:30</div>
-                </div>
-                <div class="video-meta">
-                    <div class="avatar">3D</div>
-                    <div class="video-info">
-                        <div class="video-title">Intégrer Three.js dans une app Next.js — scènes 3D réactives complètes</div>
-                        <div class="video-channel">3D Labs</div>
-                        <div class="video-stats"><span>234K vues</span><span>il y a 3 semaines</span></div>
-                    </div>
-                </div>
-            </div>
+k3_exo = [
+    ["A \\ BC", "BC=00", "BC=01", "BC=11", "BC=10"],
+    ["A = 0",  "m0=...", "m1=...", "m3=...", "m2=..."],
+    ["A = 1",  "m4=...", "m5=...", "m7=...", "m6=..."],
+]
+k3t_exo = Table(k3_exo, colWidths=[3*cm,3.2*cm,3.2*cm,3.2*cm,3.2*cm])
+k3t_exo.setStyle(TableStyle([
+    ("BACKGROUND", (0,0),(4,0), C_HL),
+    ("BACKGROUND", (0,0),(0,2), C_HL),
+    ("TEXTCOLOR", (0,0),(4,0), C_WHITE),
+    ("TEXTCOLOR", (0,0),(0,2), C_WHITE),
+    ("FONTNAME", (0,0),(-1,-1), "Helvetica-Bold"),
+    ("ALIGN", (0,0),(-1,-1), "CENTER"),
+    ("VALIGN", (0,0),(-1,-1), "MIDDLE"),
+    ("GRID", (0,0),(-1,-1), 1.5, C_DARK),
+    ("FONTSIZE", (0,0),(-1,-1), 10),
+    ("TOPPADDING", (0,0),(-1,-1), 12),
+    ("BOTTOMPADDING", (0,0),(-1,-1), 12),
+]))
+story.append(k3t_exo)
+story.append(Spacer(1,0.3*cm))
+story.append(Paragraph("Identifier les groupes : ...............................................", sBody))
+story.append(Paragraph("Résultat simplifié : F = ...............................................", sBody))
+story.append(Spacer(1, 0.5*cm))
 
-            <div class="video-card">
-                <div class="thumb">
-                    <div class="thumb-img thumb-g6">✦</div>
-                    <div class="thumb-overlay"><div class="play-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>
-                    <div class="duration-badge">14:55</div>
-                </div>
-                <div class="video-meta">
-                    <div class="avatar">TS</div>
-                    <div class="video-info">
-                        <div class="video-title">Variable Fonts : le futur de la typographie responsive sur le web</div>
-                        <div class="video-channel">Type Studio</div>
-                        <div class="video-stats"><span>178K vues</span><span>il y a 5 jours</span></div>
-                    </div>
-                </div>
-            </div>
+story.append(exo_box(23, "Karnaugh 4 variables — Groupement", [
+    Paragraph("F(A,B,C,D) = somme des minterms : m0, m1, m4, m5, m8, m9, m12, m13", sBody),
+    Spacer(1, 0.2*cm),
+], "DIFFICILE", C_HL))
 
-        </div>
+k4_exo = [
+    ["AB\\CD","CD=00","CD=01","CD=11","CD=10"],
+    ["AB=00","m0=..","m1=..","m3=..","m2=.."],
+    ["AB=01","m4=..","m5=..","m7=..","m6=.."],
+    ["AB=11","m12=.","m13=.","m15=.","m14=."],
+    ["AB=10","m8=..","m9=..","m11=.","m10=."],
+]
+k4t_exo = Table(k4_exo, colWidths=[3*cm,3*cm,3*cm,3*cm,3*cm])
+k4t_exo.setStyle(TableStyle([
+    ("BACKGROUND", (0,0),(4,0), C_ACC),
+    ("BACKGROUND", (0,0),(0,4), C_ACC),
+    ("TEXTCOLOR", (0,0),(4,0), C_WHITE),
+    ("TEXTCOLOR", (0,0),(0,4), C_WHITE),
+    ("FONTNAME", (0,0),(-1,-1), "Helvetica-Bold"),
+    ("ALIGN", (0,0),(-1,-1), "CENTER"),
+    ("VALIGN", (0,0),(-1,-1), "MIDDLE"),
+    ("GRID", (0,0),(-1,-1), 1.5, C_DARK),
+    ("FONTSIZE", (0,0),(-1,-1), 9),
+    ("TOPPADDING", (0,0),(-1,-1), 10),
+    ("BOTTOMPADDING", (0,0),(-1,-1), 10),
+]))
+story.append(k4t_exo)
+story.append(Spacer(1,0.3*cm))
+story.append(Paragraph("Groupes identifiés : ...............................................", sBody))
+story.append(Paragraph("Résultat simplifié : F = ...............................................", sBody))
+story.append(Spacer(1, 0.5*cm))
 
-        <!-- TRENDING SECTION -->
-        <div class="section-header">
-            <h2>🔥 Tendances cette semaine</h2>
-            <span class="see-all">Tout voir →</span>
-        </div>
-        <div class="video-grid">
-            <div class="video-card">
-                <div class="thumb">
-                    <div class="thumb-img thumb-g1">🚀</div>
-                    <div class="thumb-overlay"><div class="play-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>
-                    <div class="duration-badge">28:00</div>
-                </div>
-                <div class="video-meta">
-                    <div class="avatar">LF</div>
-                    <div class="video-info">
-                        <div class="video-title">Déployer un site ultra-rapide en 2026 : Vercel vs Cloudflare vs Netlify</div>
-                        <div class="video-channel">Launch Fast</div>
-                        <div class="video-stats"><span>4.7M vues</span><span>il y a 2 jours</span></div>
-                    </div>
-                </div>
-            </div>
-            <div class="video-card">
-                <div class="thumb">
-                    <div class="thumb-img thumb-g3">📐</div>
-                    <div class="thumb-overlay"><div class="play-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>
-                    <div class="duration-badge">19:33</div>
-                </div>
-                <div class="video-meta">
-                    <div class="avatar">GS</div>
-                    <div class="video-info">
-                        <div class="video-title">Maîtriser CSS Subgrid : la révolution des layouts imbriqués</div>
-                        <div class="video-channel">Grid System</div>
-                        <div class="video-stats"><span>2.1M vues</span><span>il y a 6 jours</span></div>
-                    </div>
-                </div>
-            </div>
-            <div class="video-card">
-                <div class="thumb">
-                    <div class="thumb-img thumb-g6">🌟</div>
-                    <div class="thumb-overlay"><div class="play-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>
-                    <div class="duration-badge">37:20</div>
-                </div>
-                <div class="video-meta">
-                    <div class="avatar">US</div>
-                    <div class="video-info">
-                        <div class="video-title">Dark Mode Avancé : système de thème multi-niveaux avec CSS Custom Properties</div>
-                        <div class="video-channel">UI Stars</div>
-                        <div class="video-stats"><span>3.2M vues</span><span>il y a 1 semaine</span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+story.append(exo_box(24, "Karnaugh — Cas avec don't care", [
+    Paragraph("F(A,B,C,D) = somme des minterms : m1, m3, m5, m7, m9  +  cases indifférentes (X) : m11, m13, m15", sBody),
+    Paragraph("Les cases 'X' (don't care) peuvent être utilisées dans un groupe si ça aide, ou ignorées.", sBody),
+    Spacer(1, 0.2*cm),
+    Paragraph("Remplir la table (1, 0, ou X), chercher les groupes, simplifier :", sBody),
+], "DIFFICILE", C_HL))
 
-    </main>
-</div>
+k4_dc = [
+    ["AB\\CD","CD=00","CD=01","CD=11","CD=10"],
+    ["AB=00","  0  ","  1  ","  1  ","  0  "],
+    ["AB=01","  0  ","  1  ","  1  ","  0  "],
+    ["AB=11","  0  ","  X  ","  X  ","  0  "],
+    ["AB=10","  0  ","  1  ","  X  ","  0  "],
+]
+cs = [
+    ("BACKGROUND", (0,0),(4,0), C_ACC),
+    ("BACKGROUND", (0,0),(0,4), C_ACC),
+    ("TEXTCOLOR", (0,0),(4,0), C_WHITE),
+    ("TEXTCOLOR", (0,0),(0,4), C_WHITE),
+    ("FONTNAME", (0,0),(-1,-1), "Helvetica-Bold"),
+    ("ALIGN", (0,0),(-1,-1), "CENTER"),
+    ("VALIGN", (0,0),(-1,-1), "MIDDLE"),
+    ("GRID", (0,0),(-1,-1), 1.5, C_DARK),
+    ("FONTSIZE", (0,0),(-1,-1), 10),
+    ("TOPPADDING", (0,0),(-1,-1), 10),
+    ("BOTTOMPADDING", (0,0),(-1,-1), 10),
+]
+for r in range(1,5):
+    for c in range(1,5):
+        val = k4_dc[r][c].strip()
+        if val == "1":
+            cs.append(("BACKGROUND", (c,r),(c,r), colors.HexColor("#d5f5e3")))
+            cs.append(("TEXTCOLOR", (c,r),(c,r), colors.HexColor("#1e8449")))
+        elif val == "X":
+            cs.append(("BACKGROUND", (c,r),(c,r), colors.HexColor("#fef9e7")))
+            cs.append(("TEXTCOLOR", (c,r),(c,r), C_ORANGE))
+        elif val == "0":
+            cs.append(("BACKGROUND", (c,r),(c,r), colors.HexColor("#fadbd8")))
+            cs.append(("TEXTCOLOR", (c,r),(c,r), colors.HexColor("#c0392b")))
+k4t_dc = Table(k4_dc, colWidths=[3*cm,3*cm,3*cm,3*cm,3*cm])
+k4t_dc.setStyle(TableStyle(cs))
+story.append(k4t_dc)
+story.append(Spacer(1,0.3*cm))
+story.append(Paragraph("Groupes avec les X : ...............................................", sBody))
+story.append(Paragraph("Résultat simplifié : F = ...............................................", sBody))
+story.append(PageBreak())
 
-<script>
-    // Chip interactivity
-    document.querySelectorAll('.chip').forEach(chip => {
-        chip.addEventListener('click', () => {
-            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-        });
-    });
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CORRECTIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+corr_header = Table([[Paragraph("✅  CORRECTIONS COMPLÈTES", sChap)]], colWidths=[doc.width])
+corr_header.setStyle(TableStyle([
+    ("BACKGROUND", (0,0),(-1,-1), C_DARK),
+    ("TOPPADDING", (0,0),(-1,-1), 12),
+    ("BOTTOMPADDING", (0,0),(-1,-1), 12),
+    ("LEFTPADDING", (0,0),(-1,-1), 14),
+]))
+story.append(corr_header)
+story.append(Spacer(1, 0.5*cm))
 
-    // Sidebar interactivity
-    document.querySelectorAll('.sidebar-item').forEach(item => {
-        item.addEventListener('click', () => {
-            document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-        });
-    });
+# ── Corrections Ch1 ──────────────────────────────────────────────────────────
+t = Table([[Paragraph("CHAPITRE 1 — Numération", S("ch", fontSize=11, textColor=C_WHITE, fontName="Helvetica-Bold"))]], colWidths=[doc.width])
+t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),C_ACC),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),("LEFTPADDING",(0,0),(-1,-1),10)]))
+story.append(t)
+story.append(Spacer(1,0.3*cm))
 
-    // Search focus effect
-    const searchInput = document.querySelector('.search-bar input');
-    searchInput.addEventListener('focus', () => {
-        searchInput.parentElement.style.filter = 'drop-shadow(0 0 8px rgba(62,166,255,0.3))';
-    });
-    searchInput.addEventListener('blur', () => {
-        searchInput.parentElement.style.filter = '';
-    });
-</script>
+story.append(corr_box([
+    Paragraph("<b>Exo 1 — Décimal → Binaire</b>", sCorrB),
+    Paragraph("a) 18 : 18÷2=9r0, 9÷2=4r1, 4÷2=2r0, 2÷2=1r0, 1÷2=0r1  →  <b>10010(2)</b>", sCorr),
+    Paragraph("b) 37 : 37÷2=18r1, 18÷2=9r0, 9÷2=4r1, 4÷2=2r0, 2÷2=1r0, 1÷2=0r1  →  <b>100101(2)</b>", sCorr),
+    Paragraph("c) 100 : 100÷2=50r0, 50÷2=25r0, 25÷2=12r1, 12÷2=6r0, 6÷2=3r0, 3÷2=1r1, 1÷2=0r1  →  <b>1100100(2)</b>", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
 
-</body>
-</html>
+story.append(corr_box([
+    Paragraph("<b>Exo 2 — Binaire → Décimal</b>", sCorrB),
+    Paragraph("a) 1010(2) = 1×8 + 0×4 + 1×2 + 0×1 = 8+0+2+0 = <b>10</b>", sCorr),
+    Paragraph("b) 11001(2) = 1×16 + 1×8 + 0×4 + 0×2 + 1×1 = 16+8+1 = <b>25</b>", sCorr),
+    Paragraph("c) 101101(2) = 1×32+0×16+1×8+1×4+0×2+1×1 = 32+8+4+1 = <b>45</b>", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 3 — Décimal → Hexadécimal</b>", sCorrB),
+    Paragraph("a) 16 : 16÷16=1r0, 1÷16=0r1  →  <b>10(16)</b>", sCorr),
+    Paragraph("b) 255 : 255÷16=15r15→F, 15÷16=0r15→F  →  <b>FF(16)</b>", sCorr),
+    Paragraph("c) 512 : 512÷16=32r0, 32÷16=2r0, 2÷16=0r2  →  <b>200(16)</b>", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 4 — Hexadécimal → Décimal</b>", sCorrB),
+    Paragraph("a) F(16) = 15×1 = <b>15</b>", sCorr),
+    Paragraph("b) 1A(16) = 1×16 + 10×1 = 16+10 = <b>26</b>", sCorr),
+    Paragraph("c) 3F2(16) = 3×256 + 15×16 + 2×1 = 768+240+2 = <b>1010</b>", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 5 — Addition Binaire</b>", sCorrB),
+    Paragraph("a) 1010 + 0101 = <b>1111(2)</b>   Vérif : 10 + 5 = 15 ✓", sCorr),
+    Paragraph("b) 1111 + 0001 = <b>10000(2)</b>   Vérif : 15 + 1 = 16 ✓", sCorr),
+    Paragraph("c) 1101 + 1011 = <b>11000(2)</b>   Vérif : 13 + 11 = 24 ✓", sCorr),
+]))
+story.append(Spacer(1,0.4*cm))
+
+# ── Corrections Ch2 ──────────────────────────────────────────────────────────
+t = Table([[Paragraph("CHAPITRE 2 — Suites Numériques", S("ch2", fontSize=11, textColor=C_WHITE, fontName="Helvetica-Bold"))]], colWidths=[doc.width])
+t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),C_PURPLE),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),("LEFTPADDING",(0,0),(-1,-1),10)]))
+story.append(t)
+story.append(Spacer(1,0.3*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 6 — Reconnaître le type</b>", sCorrB),
+    Paragraph("a) 2,5,8,11,14 : différences = 3,3,3,3  →  <b>Arithmétique, r=3</b>", sCorr),
+    Paragraph("b) 3,6,12,24,48 : rapports = 2,2,2,2  →  <b>Géométrique, q=2</b>", sCorr),
+    Paragraph("c) 1,4,9,16,25 : ni +constant ni ×constant  →  <b>Ni l'une ni l'autre</b> (carrés parfaits)", sCorr),
+    Paragraph("d) 100,90,80,70 : différences = -10,-10,-10  →  <b>Arithmétique, r=-10</b>", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 7 — Terme général et somme (arithmétique)</b>", sCorrB),
+    Paragraph("a) u(n) = 6 + 3n", sCorr),
+    Paragraph("b) u(15) = 6 + 3×15 = 6+45 = <b>51</b>", sCorr),
+    Paragraph("c) u(9) = 6+27 = 33.  S = 10×(6+33)/2 = 10×39/2 = 10×19,5 = <b>195</b>", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 8 — Suite géométrique</b>", sCorrB),
+    Paragraph("a) u(n) = 5 × 2^n", sCorr),
+    Paragraph("b) u(4) = 5 × 2^4 = 5 × 16 = <b>80</b>", sCorr),
+    Paragraph("c) S = 5 × (1-2^5)/(1-2) = 5 × (1-32)/(-1) = 5 × 31 = <b>155</b>", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 9 — Trouver un rang</b>", sCorrB),
+    Paragraph("4 + 7n > 200  →  7n > 196  →  n > 28  →  <b>n = 29</b> (premier rang)", sCorr),
+    Paragraph("Vérif : u(28) = 4+196 = 200 (pas strictement >)  /  u(29) = 4+203 = 207 > 200 ✓", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 10 — Problème financier</b>", sCorrB),
+    Paragraph("a) Suite géométrique (on multiplie par 1,04 à chaque année)", sCorr),
+    Paragraph("b) u(n) = 2000 × 1,04^n", sCorr),
+    Paragraph("c) 2000 × 1,04^n > 3000  →  1,04^n > 1,5", sCorr),
+    Paragraph("   n > ln(1,5)/ln(1,04) ≈ 0,405/0,039 ≈ 10,38  →  <b>n = 11 ans</b>", sCorr),
+]))
+story.append(Spacer(1,0.4*cm))
+
+# ── Corrections Ch3 ──────────────────────────────────────────────────────────
+t = Table([[Paragraph("CHAPITRE 3 — Matrices", S("ch3", fontSize=11, textColor=C_WHITE, fontName="Helvetica-Bold"))]], colWidths=[doc.width])
+t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),C_TEAL),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),("LEFTPADDING",(0,0),(-1,-1),10)]))
+story.append(t)
+story.append(Spacer(1,0.3*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 11 — Addition/Soustraction</b>", sCorrB),
+    Paragraph("a) A+B = | 5  6 |     b) A-B = | 1  -4 |     c) 2A = | 6  2 |", sCorr),
+    Paragraph("         | 3  4 |               | 1   4 |             | 4  8 |", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 12 — Multiplication 2×2</b>", sCorrB),
+    Paragraph("a) A×B : C[1,1]=1×3+2×1=5, C[1,2]=1×0+2×2=4, C[2,1]=3×3+4×1=13, C[2,2]=3×0+4×2=8", sCorr),
+    Paragraph("   A×B = | 5   4 |", sCorr),
+    Paragraph("          | 13  8 |", sCorr),
+    Paragraph("b) B×A : C[1,1]=3×1+0×3=3, C[1,2]=3×2+0×4=6, C[2,1]=1×1+2×3=7, C[2,2]=1×2+2×4=10", sCorr),
+    Paragraph("   B×A = | 3   6 |    →  A×B ≠ B×A  (non-commutatif, comme attendu !)", sCorr),
+    Paragraph("          | 7  10 |", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 13 — Matrice Identité</b>", sCorrB),
+    Paragraph("A×I : C[1,1]=2×1+3×0=2, C[1,2]=2×0+3×1=3, C[2,1]=1×1+4×0=1, C[2,2]=1×0+4×1=4", sCorr),
+    Paragraph("A×I = | 2  3 | = A  ✓  (la matrice identité ne change rien)", sCorr),
+    Paragraph("       | 1  4 |", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 14 — Matrices non carrées</b>", sCorrB),
+    Paragraph("a) A est (2×3), B est (3×2) : col(A)=3 = lig(B)=3 → possible. Résultat : matrice (2×2)", sCorr),
+    Paragraph("b) C[1,1]=1+4+0=5, C[1,2]=0+2+9=11, C[2,1]=4+10+0=14, C[2,2]=0+5+18=23", sCorr),
+    Paragraph("   A×B = | 5   11 |", sCorr),
+    Paragraph("          | 14  23 |", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 15 — Transposée et A²</b>", sCorrB),
+    Paragraph("a) A^T = | 2  3 |  (on échange lignes et colonnes)", sCorr),
+    Paragraph("          | 1  4 |", sCorr),
+    Paragraph("b) A² = A×A : C[1,1]=2×2+1×3=7, C[1,2]=2×1+1×4=6, C[2,1]=3×2+4×3=18, C[2,2]=3×1+4×4=19", sCorr),
+    Paragraph("   A² = | 7   6  |", sCorr),
+    Paragraph("         | 18  19 |", sCorr),
+]))
+story.append(Spacer(1,0.4*cm))
+
+# ── Corrections Ch4 ──────────────────────────────────────────────────────────
+t = Table([[Paragraph("CHAPITRE 4 — Probabilités", S("ch4", fontSize=11, textColor=C_WHITE, fontName="Helvetica-Bold"))]], colWidths=[doc.width])
+t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),C_GREEN),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),("LEFTPADDING",(0,0),(-1,-1),10)]))
+story.append(t)
+story.append(Spacer(1,0.3*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 16 — Complémentaire</b>", sCorrB),
+    Paragraph("a) A={2,4,6} → P(A) = 3/6 = <b>1/2</b>", sCorr),
+    Paragraph("b) P(non-A) = 1 - 1/2 = <b>1/2</b>", sCorr),
+    Paragraph("c) B={5,6} → P(B) = 2/6 = <b>1/3</b>", sCorr),
+    Paragraph("d) A∩B = {6} → P(A∩B)=1/6.  P(A∪B) = 1/2+1/3-1/6 = 3/6+2/6-1/6 = <b>4/6 = 2/3</b>", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 17 — Arbre sans remise</b>", sCorrB),
+    Paragraph("Si 1er Rouge (5/8) : P(R|R)=4/7, P(B|R)=3/7", sCorr),
+    Paragraph("Si 1er Bleue (3/8) : P(R|B)=5/7, P(B|B)=2/7", sCorr),
+    Paragraph("b) P(RR) = 5/8 × 4/7 = 20/56 = <b>5/14</b>", sCorr),
+    Paragraph("c) P(BB) = 3/8 × 2/7 = 6/56 = <b>3/28</b>", sCorr),
+    Paragraph("d) P(même) = 20/56 + 6/56 = 26/56 = <b>13/28</b>", sCorr),
+    Paragraph("e) P(différentes) = 1 - 13/28 = <b>15/28</b>", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 18 — Probabilités totales</b>", sCorrB),
+    Paragraph("a) P(D) = 0,05×0,6 + 0,10×0,4 = 0,03 + 0,04 = <b>0,07</b>  (7% de défauts)", sCorr),
+    Paragraph("b) P(A|D) = 0,05×0,6 / 0,07 = 0,03/0,07 ≈ <b>0,429</b>  (42,9% viennent de A)", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 19 — Espérance</b>", sCorrB),
+    Paragraph("E(G) = 12×(1/6) + 0×(2/6) + (-3)×(3/6)", sCorr),
+    Paragraph("     = 12/6 + 0 - 9/6 = 2 - 1,5 = <b>+0,5€</b>", sCorr),
+    Paragraph("→ L'espérance est positive : le jeu est légèrement rentable pour le joueur. ✓", sCorr),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 20 — Formule de Bayes</b>", sCorrB),
+    Paragraph("a) P(M)=0,03  P(S)=0,97  P(+|M)=0,92  P(-|M)=0,08  P(+|S)=0,05  P(-|S)=0,95", sCorr),
+    Paragraph("b) P(+) = 0,92×0,03 + 0,05×0,97 = 0,0276 + 0,0485 = <b>0,0761</b>", sCorr),
+    Paragraph("c) P(M|+) = 0,92×0,03 / 0,0761 = 0,0276/0,0761 ≈ <b>0,363  (36,3%)</b>", sCorr),
+    Paragraph("d) Malgré un test positif, seulement 36% de chance d'être malade. "
+              "Car la maladie est rare (3%), les faux positifs sont nombreux en proportion.", sCorr),
+]))
+story.append(Spacer(1,0.4*cm))
+
+# ── Corrections Ch5 ──────────────────────────────────────────────────────────
+t = Table([[Paragraph("CHAPITRE 5 — Table de Karnaugh", S("ch5", fontSize=11, textColor=C_WHITE, fontName="Helvetica-Bold"))]], colWidths=[doc.width])
+t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),C_HL),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),("LEFTPADDING",(0,0),(-1,-1),10)]))
+story.append(t)
+story.append(Spacer(1,0.3*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 21 — Karnaugh 2 variables</b>", sCorrB),
+    Paragraph("m0(A=0,B=0)=1, m1(A=0,B=1)=1, m2(A=1,B=0)=0, m3(A=1,B=1)=1", sCorr),
+    Paragraph("Groupes : {m0,m1} → B ne change pas (A=0 dans les 2) → terme Ā", sCorr),
+    Paragraph("          {m1,m3} → A change, B=1 dans les 2 → terme B", sCorr),
+    Paragraph("→  <b>F = Ā + B</b>", sCorrB),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 22 — Karnaugh 3 variables</b>", sCorrB),
+    Paragraph("m0(A=0,BC=00)=1, m2(A=0,BC=10)=1, m4(A=1,BC=00)=1, m6(A=1,BC=10)=1", sCorr),
+    Paragraph("Tous les autres = 0.", sCorr),
+    Paragraph("Groupe de 4 : {m0,m2,m4,m6} → C=0 dans tous, A et B changent → terme C̄", sCorr),
+    Paragraph("→  <b>F = C̄</b>  (simplification maximale !)", sCorrB),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 23 — Karnaugh 4 variables</b>", sCorrB),
+    Paragraph("m0,m1,m4,m5,m8,m9,m12,m13 = 1  /  Reste = 0", sCorr),
+    Paragraph("Groupe de 8 : toutes les cases avec D=0 ou D=1 (CD=00 ou 01) → C=0 dans tous", sCorr),
+    Paragraph("En regardant : dans toutes ces cases, D change (0 ou 1), mais C=0 dans toutes.", sCorr),
+    Paragraph("→  <b>F = C̄</b>", sCorrB),
+]))
+story.append(Spacer(1,0.2*cm))
+
+story.append(corr_box([
+    Paragraph("<b>Exo 24 — Karnaugh avec don't care</b>", sCorrB),
+    Paragraph("Les 1 sont en colonne CD=01 et CD=11 (D=1)", sCorr),
+    Paragraph("En utilisant les X, on peut former un grand groupe de 8 sur toute la colonne D=1.", sCorr),
+    Paragraph("Dans ce groupe : D=1 dans toutes les cases, A,B,C changent → seul D reste constant.", sCorr),
+    Paragraph("→  <b>F = D</b>", sCorrB),
+]))
+
+doc.build(story)
+print("PDF exercices généré !")
